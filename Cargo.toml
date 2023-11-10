@@ -9,3 +9,4 @@ edition = "2021"
 bevy = "0.12.0"
 rive-bevy = { git = "https://github.com/rive-app/rive-bevy" }
 rive-rs = { git = "https://github.com/rive-app/rive-rs", features = ["vello"] }
+bevy_xpbd_2d = { git = "https://github.com/Jondolf/bevy_xpbd", branch = "main" }

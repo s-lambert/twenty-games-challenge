@@ -1,9 +1,16 @@
+use crate::prelude::GameState;
 use bevy::{prelude::*, render::render_resource::Extent3d};
 use rive_bevy::{GenericEvent, SceneTarget, SpriteEntity, StateMachine};
 
-use crate::prelude::GameState;
-
 pub struct MenuPlugin;
+
+impl Plugin for MenuPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(OnEnter(GameState::Menu), setup_animation)
+            .add_systems(Update, menu_events_system)
+            .add_systems(OnExit(GameState::Menu), remove_menu);
+    }
+}
 
 #[derive(Component)]
 struct Menu;
@@ -72,13 +79,5 @@ fn menu_events_system(
 fn remove_menu(mut commands: Commands, menu_query: Query<Entity, With<Menu>>) {
     for entity in menu_query.iter() {
         commands.entity(entity).despawn();
-    }
-}
-
-impl Plugin for MenuPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Menu), setup_animation)
-            .add_systems(Update, menu_events_system)
-            .add_systems(OnExit(GameState::Menu), remove_menu);
     }
 }
