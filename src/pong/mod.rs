@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite::collide_aabb::collide};
 
 pub struct PongPlugin;
 
@@ -101,7 +101,12 @@ fn player_movement(
     }
 }
 
-fn ball_movement(time: Res<Time>, mut ball_query: Query<(&mut Transform, &mut Ball)>) {
+fn ball_movement(
+    time: Res<Time>,
+    mut ball_query: Query<(&mut Transform, &mut Ball)>,
+    player_transform_query: Query<&Transform, (Without<Ball>, With<Player>)>,
+    opponent_transform_query: Query<&Transform, (Without<Ball>, With<Opponent>)>,
+) {
     let Some((mut ball_transform, mut ball)) = ball_query.iter_mut().next() else {
         return;
     };
@@ -129,5 +134,33 @@ fn ball_movement(time: Res<Time>, mut ball_query: Query<(&mut Transform, &mut Ba
             .y
             .clamp(bottom_boundary + 1.0, top_boundary - 1.0);
         ball.direction.y *= -1.0;
+    }
+
+    if let Some(player_transform) = player_transform_query.iter().next() {
+        if ball.direction.x < 0.0
+            && collide(
+                ball_transform.translation,
+                ball_transform.scale.truncate(),
+                player_transform.translation,
+                player_transform.scale.truncate(),
+            )
+            .is_some()
+        {
+            ball.direction.x *= -1.0;
+        }
+    }
+
+    if let Some(opponent_transform) = opponent_transform_query.iter().next() {
+        if ball.direction.x > 0.0
+            && collide(
+                ball_transform.translation,
+                ball_transform.scale.truncate(),
+                opponent_transform.translation,
+                opponent_transform.scale.truncate(),
+            )
+            .is_some()
+        {
+            ball.direction.x *= -1.0;
+        }
     }
 }
