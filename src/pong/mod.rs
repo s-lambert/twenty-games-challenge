@@ -5,9 +5,12 @@ pub struct PongPlugin;
 
 impl Plugin for PongPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Pong), setup_pong)
+        app.insert_resource(Score::default())
+            .add_event::<GoalEvent>()
+            .add_systems(OnEnter(GameState::Pong), setup_pong)
             .add_systems(Update, player_movement)
-            .add_systems(Update, ball_movement);
+            .add_systems(Update, ball_movement)
+            .add_systems(Update, score_goal.after(ball_movement));
     }
 }
 
@@ -24,6 +27,17 @@ struct Opponent;
 #[derive(Component)]
 struct Ball {
     direction: Vec2,
+}
+
+#[derive(Resource, Default)]
+struct Score {
+    player: i32,
+    opponent: i32,
+}
+
+#[derive(Event)]
+struct GoalEvent {
+    is_player_goal: bool,
 }
 
 fn setup_pong(mut commands: Commands) {
@@ -106,12 +120,13 @@ fn ball_movement(
     mut ball_query: Query<(&mut Transform, &mut Ball)>,
     player_transform_query: Query<&Transform, (Without<Ball>, With<Player>)>,
     opponent_transform_query: Query<&Transform, (Without<Ball>, With<Opponent>)>,
+    mut goal_event_writer: EventWriter<GoalEvent>,
 ) {
     let Some((mut ball_transform, mut ball)) = ball_query.iter_mut().next() else {
         return;
     };
 
-    let top_boundary = ((WINDOW_WIDTH - PADDLE_WIDTH) / 2.0);
+    let top_boundary = (WINDOW_WIDTH - PADDLE_WIDTH) / 2.0;
     let bottom_boundary = top_boundary * -1.0;
 
     ball_transform.translation.x += time.delta_seconds() * PADDLE_SPEED * ball.direction.x;
@@ -121,11 +136,10 @@ fn ball_movement(
     let y = ball_transform.translation.y;
 
     if x >= top_boundary || x <= bottom_boundary {
-        ball_transform.translation.x = ball_transform
-            .translation
-            .x
-            .clamp(bottom_boundary + 1.0, top_boundary - 1.0);
-        ball.direction.x *= -1.0;
+        goal_event_writer.send(GoalEvent {
+            is_player_goal: x > 0.0,
+        });
+        return;
     }
 
     if y >= top_boundary || y <= bottom_boundary {
@@ -162,5 +176,44 @@ fn ball_movement(
         {
             ball.direction.x *= -1.0;
         }
+    }
+}
+
+fn score_goal(
+    mut goal_event_reader: EventReader<GoalEvent>,
+    mut score: ResMut<Score>,
+    mut ball_query: Query<(&mut Transform, &mut Ball), (Without<Player>, Without<Opponent>)>,
+    mut player_transform_query: Query<
+        (&mut Transform, &Player),
+        (Without<Ball>, Without<Opponent>),
+    >,
+    mut opponent_transform_query: Query<
+        (&mut Transform, &Opponent),
+        (Without<Ball>, Without<Player>),
+    >,
+) {
+    if let Some(goal_event) = goal_event_reader.read().next() {
+        if goal_event.is_player_goal {
+            score.player += 1;
+        } else {
+            score.opponent += 1;
+        }
+
+        let Some((mut ball_transform, mut ball)) = ball_query.iter_mut().next() else {
+            return;
+        };
+
+        ball.direction.x *= -1.0;
+        ball_transform.translation = Vec3::splat(0.0);
+
+        let Some((mut opponent_transform, _)) = opponent_transform_query.iter_mut().next() else {
+            return;
+        };
+        let Some((mut player_transform, _)) = player_transform_query.iter_mut().next() else {
+            return;
+        };
+
+        opponent_transform.translation.y = 0.0;
+        player_transform.translation.y = 0.0;
     }
 }
