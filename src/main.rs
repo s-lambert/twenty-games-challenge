@@ -18,6 +18,7 @@ pub mod prelude {
         #[default]
         Menu,
         Pong,
+        Breakout,
     }
 
     pub const WINDOW_HEIGHT: f32 = 500.0;

@@ -68,8 +68,10 @@ fn menu_events_system(
     mut game_state: ResMut<NextState<GameState>>,
 ) {
     for event in rive_event.read() {
-        if event.name == "Click" {
+        if event.name == "ClickPong" {
             game_state.set(GameState::Pong);
+        } else if event.name == "ClickBreakout" {
+            game_state.set(GameState::Breakout);
         } else {
             info!("Unhandled Rive event: {:?}", event);
         }
