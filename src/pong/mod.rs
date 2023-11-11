@@ -10,7 +10,13 @@ impl Plugin for PongPlugin {
             .add_systems(OnEnter(GameState::Pong), setup_pong)
             .add_systems(Update, player_movement)
             .add_systems(Update, ball_movement)
-            .add_systems(Update, score_goal.after(ball_movement));
+            .add_systems(Update, score_goal.after(ball_movement))
+            .add_systems(
+                Update,
+                update_score
+                    .after(score_goal)
+                    .run_if(in_state(GameState::Pong)),
+            );
     }
 }
 
@@ -90,6 +96,21 @@ fn setup_pong(mut commands: Commands) {
             ..default()
         },
     ));
+    // Score
+    commands.spawn(
+        TextBundle::from_sections([TextSection::from_style(TextStyle::default())]).with_style(
+            Style {
+                position_type: PositionType::Absolute,
+                top: Val::Px(5.0),
+                margin: UiRect {
+                    left: Val::Auto,
+                    right: Val::Auto,
+                    ..default()
+                },
+                ..default()
+            },
+        ),
+    );
 }
 
 fn player_movement(
@@ -216,4 +237,9 @@ fn score_goal(
         opponent_transform.translation.y = 0.0;
         player_transform.translation.y = 0.0;
     }
+}
+
+fn update_score(score: Res<Score>, mut text_query: Query<&mut Text>) {
+    let mut text = text_query.single_mut();
+    text.sections[0].value = format!("{} | {}", score.player, score.opponent);
 }
