@@ -8,14 +8,17 @@ impl Plugin for PongPlugin {
         app.insert_resource(Score::default())
             .add_event::<GoalEvent>()
             .add_systems(OnEnter(GameState::Pong), setup_pong)
-            .add_systems(Update, player_movement)
-            .add_systems(Update, ball_movement)
-            .add_systems(Update, opponent_movement)
-            .add_systems(Update, score_goal.after(ball_movement))
             .add_systems(
                 Update,
-                update_score
-                    .after(score_goal)
+                (
+                    player_movement,
+                    opponent_movement,
+                    ball_movement
+                        .after(player_movement)
+                        .after(opponent_movement),
+                    score_goal.after(ball_movement),
+                    update_score.after(score_goal),
+                )
                     .run_if(in_state(GameState::Pong)),
             );
     }
