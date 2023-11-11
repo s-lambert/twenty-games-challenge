@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use bevy::{prelude::*, sprite::collide_aabb::collide};
+use std::time::Duration;
 
 pub struct PongPlugin;
 
@@ -37,6 +38,7 @@ struct Opponent;
 #[derive(Component)]
 struct Ball {
     direction: Vec2,
+    hit_sound: Handle<Pitch>,
 }
 
 #[derive(Resource, Default)]
@@ -50,7 +52,7 @@ struct GoalEvent {
     is_player_goal: bool,
 }
 
-fn setup_pong(mut commands: Commands) {
+fn setup_pong(mut commands: Commands, mut pitch_assets: ResMut<Assets<Pitch>>) {
     // Player
     commands.spawn((
         Player,
@@ -84,9 +86,11 @@ fn setup_pong(mut commands: Commands) {
         },
     ));
     // Ball
+    let hit_sound = pitch_assets.add(Pitch::new(440.0, Duration::from_millis(100)));
     commands.spawn((
         Ball {
             direction: Vec2::new(3.0, 2.0).normalize(),
+            hit_sound,
         },
         SpriteBundle {
             sprite: Sprite {
@@ -174,6 +178,7 @@ fn opponent_movement(
 
 fn ball_movement(
     time: Res<Time>,
+    mut commands: Commands,
     mut ball_query: Query<(&mut Transform, &mut Ball)>,
     player_transform_query: Query<&Transform, (Without<Ball>, With<Player>)>,
     opponent_transform_query: Query<&Transform, (Without<Ball>, With<Opponent>)>,
@@ -205,6 +210,10 @@ fn ball_movement(
             .y
             .clamp(bottom_boundary + 1.0, top_boundary - 1.0);
         ball.direction.y *= -1.0;
+        commands.spawn(PitchBundle {
+            source: ball.hit_sound.clone(),
+            ..default()
+        });
     }
 
     if let Some(player_transform) = player_transform_query.iter().next() {
@@ -218,6 +227,10 @@ fn ball_movement(
             .is_some()
         {
             ball.direction.x *= -1.0;
+            commands.spawn(PitchBundle {
+                source: ball.hit_sound.clone(),
+                ..default()
+            });
         }
     }
 
@@ -232,6 +245,10 @@ fn ball_movement(
             .is_some()
         {
             ball.direction.x *= -1.0;
+            commands.spawn(PitchBundle {
+                source: ball.hit_sound.clone(),
+                ..default()
+            });
         }
     }
 }
