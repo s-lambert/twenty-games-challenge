@@ -10,6 +10,7 @@ impl Plugin for PongPlugin {
             .add_systems(OnEnter(GameState::Pong), setup_pong)
             .add_systems(Update, player_movement)
             .add_systems(Update, ball_movement)
+            .add_systems(Update, opponent_movement)
             .add_systems(Update, score_goal.after(ball_movement))
             .add_systems(
                 Update,
@@ -134,6 +135,38 @@ fn player_movement(
             - time.delta_seconds() * PADDLE_SPEED)
             .clamp(bottom_boundary, top_boundary);
     }
+}
+
+fn opponent_movement(
+    time: Res<Time>,
+    mut opponent_transform_query: Query<&mut Transform, (Without<Ball>, With<Opponent>)>,
+    ball_query: Query<&Transform, With<Ball>>,
+) {
+    let Some(mut opponent_transform) = opponent_transform_query.iter_mut().next() else {
+        return;
+    };
+    let Some(ball_transform) = ball_query.iter().next() else {
+        return;
+    };
+
+    let distance_to_ball = opponent_transform.translation.y - ball_transform.translation.y;
+    let top_boundary = (WINDOW_HEIGHT - PADDLE_HEIGHT) / 2.0;
+    let bottom_boundary = top_boundary * -1.0;
+
+    if distance_to_ball > 0.0 {
+        opponent_transform.translation.y = (opponent_transform.translation.y
+            - time.delta_seconds() * PADDLE_SPEED)
+            .max(ball_transform.translation.y);
+    } else if distance_to_ball < 0.0 {
+        opponent_transform.translation.y = (opponent_transform.translation.y
+            + time.delta_seconds() * PADDLE_SPEED)
+            .min(ball_transform.translation.y);
+    }
+
+    opponent_transform.translation.y = opponent_transform
+        .translation
+        .y
+        .clamp(bottom_boundary, top_boundary);
 }
 
 fn ball_movement(
